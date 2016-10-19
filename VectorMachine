@@ -46,32 +46,66 @@ class RSS5:
         RSI_vals = talib.RSI(self.close_ask_array, timeperiod=self.period)
         MOM_vals = talib.MOM(self.close_ask_array)
 
+        y_test_close = np.array(self.close_ask_array[40:])
+        y_test_open = np.array(self.open_ask_array[40:])
 
-        # Range of closing values to grab
-        n = (self.count - 40) / 2
+        print 'y_test_close before classification: ', y_test_close[-10:]
 
-        y_train_close = np.array(self.close_ask_array[40:-n])
-        y_train_open = np.array(self.open_ask_array[40:-n])
+        # testing feature vectors
+        X_test1 = np.array(RSI_vals[40:]).reshape(-1, 1)
+        X_test2 = np.array(EMA_vals[40:]).reshape(-1, 1)
+        X_test3 = np.array(MOM_vals[40:]).reshape(-1, 1)
 
-        # Training feature vectors
-        X_train1 = np.array(RSI_vals[40:-n]).reshape(-1, 1)
-        X_train2 = np.array(EMA_vals[40:-n]).reshape(-1, 1)
-        X_train3 = np.array(MOM_vals[40:-n]).reshape(-1, 1)
+        X_test = np.concatenate((X_test1.T, X_test2.T, X_test3.T), axis=0)
+        X_test = X_test.T
 
-        X_train = np.concatenate((X_train1.T, X_train2.T, X_train3.T), axis=0)
-        X_train = X_train.T
+        #print 'X_test ', X_test
+        #print 'X_test[:-1] ', X_test[:-1]
 
-        #print 'X_train ', X_train
-        #print 'X_train[:-1] ', X_train[:-1]
 
-        # Create output for training data of for SVM machine based on classification
-        for i in range(0, len(y_train_close)):
-            if y_train_close[i] - y_train_open[i] > 0:
-                y_train_close[i] = 1
+
+        # Create output for testing data of for SVM machine based on classification
+        for i in range(0, len(y_test_close)):
+            if y_test_close[i] - y_test_open[i] > 0:
+                y_test_close[i] = 1
             else:
-                y_train_close[i] = 0
+                y_test_close[i] = 0
 
+        #print 'Actual_close: ', y_test_close[-10:]
 
         clf = SVC(kernel='rbf', C=1, gamma=0.5)
-        clf.fit(X_train, y_train_close)
-        clf.predict(X_train[:-1])
+        clf.fit(X_test, y_test_close)
+        predicted = clf.predict(X_test[-1])
+
+        # hit_rate = 0  # compare predicted with actual market movement to determine prediction accuracy.
+        # for i in range(0, len(predicted)):
+        #     if predicted[i] == y_test_close[i]:
+        #         hit_rate += 1
+        #
+        # print 'accuracy: ', hit_rate / float(len(predicted))
+
+        return predicted
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
