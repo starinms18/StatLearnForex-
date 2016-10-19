@@ -1,0 +1,77 @@
+__author__ = 'michaelstarin'
+
+
+import numpy as np
+from datetime import datetime
+from datetime import timedelta
+from matplotlib import pyplot as plt
+import talib
+
+from Restful import RestfulAPI
+from technical_analysis import Indicators
+from ReversalMinMax import Reversal
+from Support_Resistance import SRZones
+from sklearn import datasets, linear_model
+from sklearn.svm import SVC
+
+
+
+
+class RSS5:
+    def __init__(self, granularity, count, currency_pair, oanda_account_id, oanda_access_token, domain, oanda, period,
+                 sensitivity_range, srzone_range,close_ask_array,open_ask_array):
+        self.granularity = granularity
+        self.count = count
+        self.currency_pair = currency_pair
+        self.oanda_account_id = oanda_account_id
+        self.oanda_access_token = oanda_access_token
+        self.close_ask_array = close_ask_array
+        self.open_ask_array = open_ask_array
+        self.oanda = oanda
+        self.array = None
+        self.now = None
+        self.now_min = None
+        self.domain = domain
+        self.minutes = 5
+        self.seconds = 60
+        self.period = period
+        self.sensitivity_range = sensitivity_range
+        self.srzone_range = srzone_range
+
+
+    def main_fx(self):
+
+        EMA_vals = talib.EMA(self.close_ask_array)
+        SMA_vals = talib.SMA(self.close_ask_array)
+        RSI_vals = talib.RSI(self.close_ask_array, timeperiod=self.period)
+        MOM_vals = talib.MOM(self.close_ask_array)
+
+
+        # Range of closing values to grab
+        n = (self.count - 40) / 2
+
+        y_train_close = np.array(self.close_ask_array[40:-n])
+        y_train_open = np.array(self.open_ask_array[40:-n])
+
+        # Training feature vectors
+        X_train1 = np.array(RSI_vals[40:-n]).reshape(-1, 1)
+        X_train2 = np.array(EMA_vals[40:-n]).reshape(-1, 1)
+        X_train3 = np.array(MOM_vals[40:-n]).reshape(-1, 1)
+
+        X_train = np.concatenate((X_train1.T, X_train2.T, X_train3.T), axis=0)
+        X_train = X_train.T
+
+        #print 'X_train ', X_train
+        #print 'X_train[:-1] ', X_train[:-1]
+
+        # Create output for training data of for SVM machine based on classification
+        for i in range(0, len(y_train_close)):
+            if y_train_close[i] - y_train_open[i] > 0:
+                y_train_close[i] = 1
+            else:
+                y_train_close[i] = 0
+
+
+        clf = SVC(kernel='rbf', C=1, gamma=0.5)
+        clf.fit(X_train, y_train_close)
+        clf.predict(X_train[:-1])
